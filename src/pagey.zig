@@ -26,20 +26,20 @@ const Msg = struct {
 };
 
 fn offsetFromPageTile(tile_x: u64, tile_y: u64, pages_in_row: u64) usize {
-    return @intCast(usize, (tile_x + (tile_y * pages_in_row)) * std.mem.page_size);
+    return @intCast((tile_x + (tile_y * pages_in_row)) * std.mem.page_size);
 }
 
 // From https://math.stackexchange.com/questions/466198/algorithm-to-get-the-maximum-size-of-n-squares-that-fit-into-a-rectangle-with-a
 fn squareSize(n: u64, x: u64, y: u64) u64 {
     // we could use @Vector for this
-    const n_f = @intToFloat(f32, n);
-    const x_f = @intToFloat(f32, x);
-    const y_f = @intToFloat(f32, y);
+    const n_f = @as(f32, @floatFromInt(n));
+    const x_f = @as(f32, @floatFromInt(x));
+    const y_f = @as(f32, @floatFromInt(y));
     const px = @ceil(@sqrt(n_f * x_f / y_f));
     const py = @ceil(@sqrt(n_f * y_f / x_f));
     const sx = if (@floor(px * y_f / x_f) * px < n_f) y_f / @ceil(px * y_f / x_f) else x_f / px;
     const sy = if (@floor(px * x_f / y_f) * py < n_f) x_f / @ceil(py * x_f / y_f) else y_f / py;
-    return @floatToInt(u64, @max(sx, sy));
+    return @intFromFloat(@max(sx, sy));
 }
 
 pub fn main() !u8 {
@@ -94,7 +94,6 @@ pub fn main() !u8 {
         0,
     );
     defer std.os.munmap(mapped_file);
-    //try std.os.madvise(mapped_file.ptr, mapped_file.len, std.os.MADV.RANDOM);
 
     // Setup mincore page vector
     var vec = try allocator.alloc(u8, pages);
@@ -122,7 +121,7 @@ pub fn main() !u8 {
     // Init Raylib Window
     ray.SetTraceLogLevel(4);
     ray.SetTargetFPS(60);
-    ray.InitWindow(@intCast(i32, res_x), @intCast(i32, res_y), window_title.ptr);
+    ray.InitWindow(@intCast(res_x), @intCast(res_y), window_title.ptr);
     ray.SetWindowState(ray.FLAG_WINDOW_RESIZABLE);
 
     var msg = Msg{ .ticks = 0, .msg = .none };
@@ -135,8 +134,8 @@ pub fn main() !u8 {
         ray.ClearBackground(ray.BLACK);
 
         if (ray.IsWindowResized()) {
-            res_x = @intCast(u64, ray.GetScreenWidth());
-            res_y = @intCast(u64, ray.GetScreenHeight());
+            res_x = @intCast(ray.GetScreenWidth());
+            res_y = @intCast(ray.GetScreenHeight());
             tile_size = squareSize(pages, res_x, res_y);
             pages_per_row = @divTrunc(res_x, tile_size);
             max_pages = @min(vec.len, res_x * res_y);
@@ -155,18 +154,18 @@ pub fn main() !u8 {
             var col: usize = i % pages_per_row;
             var row: usize = @divTrunc(i, pages_per_row);
             ray.DrawRectangle(
-                @intCast(i32, col * tile_size),
-                @intCast(i32, row * tile_size),
-                @intCast(i32, tile_size),
-                @intCast(i32, tile_size),
+                @intCast(col * tile_size),
+                @intCast(row * tile_size),
+                @intCast(tile_size),
+                @intCast(tile_size),
                 if (v & 0x1 == 1) ray.GREEN else ray.WHITE,
             );
             if (tile_size > 3) {
                 ray.DrawRectangleLines(
-                    @intCast(i32, col * tile_size),
-                    @intCast(i32, row * tile_size),
-                    @intCast(i32, tile_size + tile_pad),
-                    @intCast(i32, tile_size + tile_pad),
+                    @intCast(col * tile_size),
+                    @intCast(row * tile_size),
+                    @intCast(tile_size + tile_pad),
+                    @intCast(tile_size + tile_pad),
                     ray.GRAY,
                 );
             }
@@ -178,17 +177,17 @@ pub fn main() !u8 {
             const mouse_y = ray.GetMouseY();
 
             // Highlight Current Page
-            const mouse_tile_x = @divFloor(@intCast(u64, mouse_x), tile_size);
-            const mouse_tile_y = @divFloor(@intCast(u64, mouse_y), tile_size);
+            const mouse_tile_x = @divFloor(@as(u64, @intCast(mouse_x)), tile_size);
+            const mouse_tile_y = @divFloor(@as(u64, @intCast(mouse_y)), tile_size);
 
             const mouse_tile = mouse_tile_x + mouse_tile_y * pages_per_row;
 
             if (mouse_tile_x < pages_per_row and mouse_tile < pages) {
                 ray.DrawRectangle(
-                    @intCast(i32, mouse_tile_x * tile_size),
-                    @intCast(i32, mouse_tile_y * tile_size),
-                    @intCast(i32, tile_size),
-                    @intCast(i32, tile_size),
+                    @intCast(mouse_tile_x * tile_size),
+                    @intCast(mouse_tile_y * tile_size),
+                    @intCast(tile_size),
+                    @intCast(tile_size),
                     .{ .r = 255, .g = 96, .b = 32, .a = 128 },
                 );
 

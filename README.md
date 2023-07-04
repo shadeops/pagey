@@ -25,3 +25,7 @@ Once Pagey is running:
 * F2 - Sets madvise to SEQUENTIAL
 * F3 - Sets madivse to RANDOM
 
+# Requirements
+* Linux x86
+* Zig 0.11.0-dev.3934 (or later)
+
