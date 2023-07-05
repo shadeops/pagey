@@ -18,7 +18,7 @@ fn build_flush(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin
 }
 
 fn build_pagey(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.Mode) void {
-    const raylib = raylib_build.addRaylib(b, target, optimize);
+    const raylib = raylib_build.addRaylib(b, target, optimize, .{});
 
     const exe = b.addExecutable(.{
         .name = "pagey",
