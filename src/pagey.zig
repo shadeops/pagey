@@ -52,7 +52,7 @@ pub fn main() !u8 {
     const allocator = gpa.allocator();
 
     // Parse Args
-    var args = try std.process.argsAlloc(allocator);
+    const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
     if (args.len <= 1) {
@@ -151,8 +151,8 @@ pub fn main() !u8 {
         // This could probably be done in a GLSL shader with the page
         // vector passed in as a texture map
         for (vec[0..max_pages], 0..) |v, i| {
-            var col: usize = i % pages_per_row;
-            var row: usize = @divTrunc(i, pages_per_row);
+            const col: usize = i % pages_per_row;
+            const row: usize = @divTrunc(i, pages_per_row);
             ray.DrawRectangle(
                 @intCast(col * tile_size),
                 @intCast(row * tile_size),

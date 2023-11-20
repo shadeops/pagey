@@ -27,7 +27,7 @@ fn build_pagey(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin
         .optimize = optimize,
     });
     exe.linkLibrary(raylib);
-    exe.addIncludePath("ext/raylib/src");
+    exe.addIncludePath(.{.path="ext/raylib/src"});
     exe.linkLibC();
     b.installArtifact(exe); 
 
