@@ -42,6 +42,26 @@ fn squareSize(n: u64, x: u64, y: u64) u64 {
     return @intFromFloat(@max(sx, sy));
 }
 
+fn flush() void {
+    std.os.sync();
+    const drop_caches = std.fs.openFileAbsoluteZ(
+        "/proc/sys/vm/drop_caches",
+        .{ .mode = .write_only }) catch |err| switch (err) {
+            error.AccessDenied => {
+                std.log.err("No permissions for /proc/sys/vm/drop_caches, try sudo", .{});
+                return;
+            },
+            else => {
+                std.log.err("Error accessing /proc/sys/vm/drop_caches, {}", .{err});
+                return;
+            },
+        };
+    defer drop_caches.close();
+    _ = drop_caches.write("3") catch |err| {
+        std.log.err("Failed to write to drop_caches {}", .{err});
+    };
+}
+
 pub fn main() !u8 {
 
     // Setup Allocator
@@ -219,6 +239,8 @@ pub fn main() !u8 {
             } else if (ray.IsKeyPressed(ray.KEY_F3)) {
                 try std.os.madvise(mapped_file.ptr, mapped_file.len, std.os.MADV.RANDOM);
                 msg = .{ .msg = .random, .ticks = 30 };
+            } else if (ray.IsKeyPressed(ray.KEY_DELETE)) {
+                flush();
             }
         }
 
