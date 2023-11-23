@@ -1,50 +1,51 @@
 const std = @import("std");
 
-const ray = @cImport(
-{
-//    @cDefine("GRAPHICS_API_OPENGL_43", "1");
+const ray = @cImport({
     @cInclude("raylib.h");
     @cInclude("rlgl.h");
-}
-);
-//const rlgl = @cImport(
-//};
-// RayLib uses normalized textures, GL_R
-// only for SSBO does it pass RL_R8UI
-// https://www.khronos.org/opengl/wiki/Image_Format
-const shader_glsl = 
+});
+
+const shader_glsl =
     \\#version 430
+    \\
+    \\// Provided by raylib
+    \\
     \\in vec2 fragTexCoord;
     \\in vec4 fragColor;
     \\
-    \\uniform sampler2D rgba_tex;
+    \\uniform sampler2D texture0;
     \\
     \\out vec4 finalColor;
     \\
+    \\
+    \\// Provided by program
+    \\
+    \\// SSBO
     \\layout(std430, binding = 1) readonly restrict buffer data
     \\{
     \\    uint dataArray[];
     \\};
-    \\uniform uint size;
+    \\uniform int tile_size;
     \\
     \\void main() {
     \\
-    \\vec4 rgba = texelFetch(rgba_tex, ivec2(1,0), 0);
-    //\\vec4 rgba = texture(rgba_tex, fragTexCoord);
-    \\rgba.a = 1.0;
-    \\ivec2 tex_size = textureSize(rgba_tex, 0);
-    \\ivec4 rgba8 = ivec4(round(rgba*255));
-    \\
+    \\ivec2 tex_size = textureSize(texture0, 0);
+    \\int row = int(floor((fragTexCoord.y * tex_size.y)/tile_size));
+    \\int col = int(floor((fragTexCoord.x * tex_size.x)/tile_size));
+    \\int tiles_per_row = tex_size.x / tile_size;
+    \\int tile = row * tiles_per_row + col;
+    \\uint element = tile / 4;
+    \\uint offset = (tile % 4) * 8;
+    \\uint val = (dataArray[element] >> offset) & 255;
     \\finalColor = vec4(0.0, 0.0, 0.0, 1.0);
-    //\\finalColor = rgba;
+    \\
     // If we pass u8's we need to shift the GLSL uint to get the u8
-    \\if (((dataArray[0] >> 24 ) & 255) == 3) finalColor.r = 1;
-    \\if (((dataArray[0] >> 16 ) & 255) == 2) finalColor.g = 1;
-    \\if (((dataArray[0] >> 8 ) & 255) == 1) finalColor.b = 1;
-    \\if (((dataArray[0] >> 0 ) & 255) == 0) finalColor.b = 1;
-    \\if ((dataArray[2] & 255 ) == 2) finalColor.b = 1;
-    //\\if (((dataArray[2] >> 8) & 255) == 2) finalColor.g = 1;
-    //\\if (((dataArray[3] >> 16) & 255) == 3) finalColor.b = 1;
+    // Assuming dataArray = [_]u8{0,1,2,3,4,5,6,...};
+    //\\ ((dataArray[0] >> 24 ) & 255) == 3
+    //\\ ((dataArray[0] >> 16 ) & 255) == 2
+    //\\ ((dataArray[0] >>  8 ) & 255) == 1
+    //\\ ((dataArray[0] >>  0 ) & 255) == 0
+    \\if (val == 1) finalColor.g = 1;
     \\}
 ;
 
@@ -58,6 +59,8 @@ const tiles_per_col = @divExact(res_y, tile_size);
 const max_tiles = tiles_per_row * tiles_per_col;
 
 pub fn main() !u8 {
+    var prng = std.rand.DefaultPrng.init(42);
+    const rand = prng.random();
 
     // Setup Allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -68,61 +71,50 @@ pub fn main() !u8 {
     const vec = try allocator.alloc(u8, max_tiles);
     defer allocator.free(vec);
 
+    //_ = rand;
     for (vec, 0..) |*v, i| {
-        v.* = @intCast(@mod(i, 256));
+        _ = i;
+        v.* = if (rand.boolean()) 1 else 0;
+        //v.* = 0;
     }
-
+    vec[3] = 1;
     ///////////////////////////////////////////////////////////////////////////
     // Init Raylib Window
     ray.SetTraceLogLevel(0);
     ray.SetTargetFPS(60);
     ray.InitWindow(@intCast(res_x), @intCast(res_y), "Buffy");
     defer ray.CloseWindow();
-    
+
     const img = ray.GenImageColor(res_x, res_y, ray.BLANK);
     //ray.ImageFormat(&img, ray.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
     const tex = ray.LoadTextureFromImage(img);
     defer ray.UnloadTexture(tex);
     ray.UnloadImage(img);
 
-    //const img_rgb = ray.GenImageColor(16, 16, ray.WHITE);
-    //const rgb = ray.LoadTextureFromImage(img_rgb);
-    //ray.UnloadImage(img_rgb);
-    const rgb = ray.LoadTexture("r8g8b8.png");
-    defer ray.UnloadTexture(rgb);
-    //const rgba = ray.LoadTexture("r8g8b8a8.png");
-    //const grayscale = ray.LoadTexture("grayscale.png");
-    ray.SetTextureFilter(rgb, ray.TEXTURE_FILTER_POINT);
-    ray.SetTextureWrap(rgb, ray.TEXTURE_WRAP_CLAMP);
-    //std.log.info("{} {} {}", .{ rgb.format, rgba.format, grayscale.format });
-    std.log.info("{} {} {}", .{ rgb.width, rgb.height, rgb.id });
-
     const shader = ray.LoadShaderFromMemory(null, shader_glsl);
     defer ray.UnloadShader(shader);
 
-    const rgba_tex_loc = ray.GetShaderLocation(shader, "rgba_tex");
-
-    var data = [_]u8{0,1,2,3,4,5,6,7,8,9,10,11};
-    var data2 = [_]u8{0}**12;
-    const ssbo = ray.rlLoadShaderBuffer(@sizeOf(@TypeOf(data)), &data, ray.RL_DYNAMIC_DRAW);
-    ray.rlReadShaderBuffer(ssbo, &data2, 1, 0);
-    ray.rlUpdateShaderBuffer(ssbo, &data, @sizeOf(@TypeOf(data)), 0);
-    std.log.info("hmm {} {}", .{ssbo, data2[0]});
-    std.log.info("{} {}", .{@sizeOf(@TypeOf(data)), ray.rlGetShaderBufferSize(ssbo)});
+    const tile_size_i = @as(i32, @intCast(tile_size));
+    const tile_size_loc = ray.GetShaderLocation(shader, "tile_size");
+    ray.SetShaderValue(shader, tile_size_loc, &tile_size_i, ray.SHADER_UNIFORM_INT);
+    const ssbo = ray.rlLoadShaderBuffer(@intCast(vec.len), vec.ptr, ray.RL_DYNAMIC_DRAW);
     defer ray.rlUnloadShaderBuffer(ssbo);
+    //ray.rlUpdateShaderBuffer(ssbo, &data, @sizeOf(@TypeOf(data)), 0);
+
     // Main Loop
     while (!ray.WindowShouldClose()) {
-        
         ray.rlBindShaderBuffer(ssbo, 1);
-        
-        ray.BeginDrawing();
 
+        ray.BeginDrawing();
         ray.ClearBackground(ray.BLACK);
 
         {
             ray.BeginShaderMode(shader);
-            ray.SetShaderValueTexture(shader, rgba_tex_loc, rgb); 
             defer ray.EndShaderMode();
+
+            // must be set within a Shader mode as it gets reset at the end
+            //ray.SetShaderValueTexture(shader, rgba_tex_loc, rgb);
+
             //ray.DrawRectangle(0,0,400,240,ray.WHITE);
             ray.DrawTexture(tex, 0, 0, ray.WHITE);
         }
