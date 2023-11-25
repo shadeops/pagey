@@ -10,7 +10,7 @@ const ray = @cImport({
 //const tile_size = 20;
 const res_x = 1600;
 const res_y = 1200;
-const tile_size = 5;
+const tile_size = 10;
 
 const tile_pad = if (tile_size < 16) 1 else 0;
 const tiles_per_row = @divExact(res_x, tile_size);
@@ -97,12 +97,11 @@ pub fn main() !u8 {
     defer ray.UnloadShader(shader);
 
     const tile_size_loc = ray.GetShaderLocation(shader, "tile_size");
-    const tile_size_shd = @as(u32, @intCast(tile_size));
+    const tile_size_shd = @as(i32, @intCast(tile_size));
     ray.SetShaderValue(shader, tile_size_loc, &tile_size_shd, ray.SHADER_UNIFORM_INT);
 
     const ssbo = ray.rlLoadShaderBuffer(@intCast(vec.len), vec.ptr, ray.RL_DYNAMIC_DRAW);
     defer ray.rlUnloadShaderBuffer(ssbo);
-    //ray.rlUpdateShaderBuffer(ssbo, &data, @sizeOf(@TypeOf(data)), 0);
 
     ray.rlBindShaderBuffer(ssbo, 1);
 
@@ -147,16 +146,9 @@ pub fn main() !u8 {
             0 => {
                 ray.BeginShaderMode(shader);
                 defer ray.EndShaderMode();
-
-                // must be set within a Shader mode as it gets reset at the end
-                //ray.SetShaderValueTexture(shader, rgba_tex_loc, rgb);
-
-                //ray.DrawRectangle(0,0,400,240,ray.WHITE);
                 ray.DrawTexture(tex, 0, 0, ray.WHITE);
             },
             1 => {
-                // This could probably be done in a GLSL shader with the page
-                // vector passed in as a texture map
                 for (vec[0..max_tiles], 0..) |v, i| {
                     const col: usize = i % tiles_per_row;
                     const row: usize = @divTrunc(i, tiles_per_row);
@@ -170,8 +162,6 @@ pub fn main() !u8 {
                 }
             },
             2 => {
-                // This could probably be done in a GLSL shader with the page
-                // vector passed in as a texture map
                 for (vec[0..max_tiles], 0..) |v, i| {
                     const col: usize = i % tiles_per_row;
                     const row: usize = @divTrunc(i, tiles_per_row);
@@ -197,26 +187,26 @@ pub fn main() !u8 {
             .{ .x = 0, .y = 0 },
             ray.WHITE,
         );
-        //if (ray.IsCursorOnScreen()) {
-        //    const mouse_x = ray.GetMouseX();
-        //    const mouse_y = ray.GetMouseY();
+        if (ray.IsCursorOnScreen()) {
+            const mouse_x = ray.GetMouseX();
+            const mouse_y = ray.GetMouseY();
 
-        //    // Highlight Current Page
-        //    const mouse_tile_x = @divFloor(@as(u64, @intCast(mouse_x)), tile_size);
-        //    const mouse_tile_y = @divFloor(@as(u64, @intCast(mouse_y)), tile_size);
+            // Highlight Current Page
+            const mouse_tile_x = @divFloor(@as(u64, @intCast(mouse_x)), tile_size);
+            const mouse_tile_y = @divFloor(@as(u64, @intCast(mouse_y)), tile_size);
 
-        //    const mouse_tile = mouse_tile_x + mouse_tile_y * tiles_per_row;
+            const mouse_tile = mouse_tile_x + mouse_tile_y * tiles_per_row;
 
-        //    if (mouse_tile_x < tiles_per_row and mouse_tile < max_tiles) {
-        //        ray.DrawRectangle(
-        //            @intCast(mouse_tile_x * tile_size),
-        //            @intCast(mouse_tile_y * tile_size),
-        //            @intCast(tile_size),
-        //            @intCast(tile_size),
-        //            .{ .r = 255, .g = 96, .b = 32, .a = 128 },
-        //        );
-        //    }
-        //}
+            if (mouse_tile_x < tiles_per_row and mouse_tile < max_tiles) {
+                ray.DrawRectangle(
+                    @intCast(mouse_tile_x * tile_size),
+                    @intCast(mouse_tile_y * tile_size),
+                    @intCast(tile_size),
+                    @intCast(tile_size),
+                    .{ .r = 255, .g = 96, .b = 32, .a = 128 },
+                );
+            }
+        }
 
         ray.DrawFPS(10, 10);
         ray.EndDrawing();
