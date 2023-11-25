@@ -19,6 +19,7 @@ fn build_flush(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin
 
 fn build_pagey(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.Mode) void {
     const raylib = raylib_build.addRaylib(b, target, optimize, .{});
+    raylib.defineCMacro("GRAPHICS_API_OPENGL_43", "1");
 
     const exe = b.addExecutable(.{
         .name = "pagey",
