@@ -7,6 +7,7 @@ const ray = @cImport({
 
 const default_res_x = 1200;
 const default_res_y = 1000;
+const hilight_color = ray.Color{ .r = 255, .g = 96, .b = 32, .a = 128 };
 
 const shader_glsl =
     \\#version 430
@@ -95,7 +96,10 @@ fn squareSize(n: i32, x: i32, y: i32) i32 {
 
 fn flush() void {
     std.os.sync();
-    const drop_caches = std.fs.openFileAbsoluteZ("/proc/sys/vm/drop_caches", .{ .mode = .write_only }) catch |err| switch (err) {
+    const drop_caches = std.fs.openFileAbsoluteZ(
+        "/proc/sys/vm/drop_caches",
+        .{ .mode = .write_only },
+    ) catch |err| switch (err) {
         error.AccessDenied => {
             std.log.err("No permissions for /proc/sys/vm/drop_caches, try sudo", .{});
             return;
@@ -116,21 +120,21 @@ fn generateGridOverlay(
     res_y: i32,
     tile_size: i32,
     pad: i32,
-    pages: i32,
+    tiles: i32,
 ) ray.RenderTexture {
     const tex = ray.LoadRenderTexture(res_x, res_y);
-    const tiles_per_row = @as(u32, @intCast(@divTrunc(res_x, tile_size)));
+    const tiles_per_row: usize = @intCast(@divTrunc(res_x, tile_size));
     {
         ray.BeginTextureMode(tex);
         defer ray.EndTextureMode();
         ray.ClearBackground(ray.BLANK);
 
-        for (0..@intCast(pages)) |i| {
-            const col: usize = i % tiles_per_row;
-            const row: usize = @divTrunc(i, tiles_per_row);
+        for (0..@intCast(tiles)) |i| {
+            const col: i32 = @intCast(i % tiles_per_row);
+            const row: i32 = @intCast(@divTrunc(i, tiles_per_row));
             ray.DrawRectangleLines(
-                @as(i32, @intCast(col)) * tile_size,
-                @as(i32, @intCast(row)) * tile_size,
+                col * tile_size,
+                row * tile_size,
                 tile_size + pad,
                 tile_size + pad,
                 ray.GRAY,
@@ -234,7 +238,7 @@ pub fn main() !u8 {
     // Init Raylib Window
     ray.SetTraceLogLevel(4);
     ray.SetTargetFPS(60);
-    ray.InitWindow(@intCast(res_x), @intCast(res_y), window_title.ptr);
+    ray.InitWindow(res_x, res_y, window_title.ptr);
     ray.SetWindowState(ray.FLAG_WINDOW_RESIZABLE);
 
     var msg = Msg{};
@@ -265,8 +269,8 @@ pub fn main() !u8 {
 
         // Handle resizing of window
         if (ray.IsWindowResized()) {
-            res_x = @intCast(ray.GetScreenWidth());
-            res_y = @intCast(ray.GetScreenHeight());
+            res_x = ray.GetScreenWidth();
+            res_y = ray.GetScreenHeight();
             tile_size = squareSize(@intCast(pages), res_x, res_y);
             pages_per_row = @divTrunc(res_x, tile_size);
             max_pages = @min(res_x * res_y, @as(i32, @intCast(vec.len)));
@@ -349,7 +353,7 @@ pub fn main() !u8 {
                     mouse_tile_y * tile_size,
                     tile_size,
                     tile_size,
-                    .{ .r = 255, .g = 96, .b = 32, .a = 128 },
+                    hilight_color,
                 );
 
                 // Load Byte From Current Page
