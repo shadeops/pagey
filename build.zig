@@ -2,7 +2,7 @@ const std = @import("std");
 
 const raylib_build = @import("ext/raylib/src/build.zig");
 
-fn build_flush(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.Mode) void {
+fn build_flush(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.Mode) void {
     const exe = b.addExecutable(.{
         .name = "flush",
         .root_source_file = .{ .path = "src/flush.zig" },
@@ -17,7 +17,7 @@ fn build_flush(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin
     run_step.dependOn(&run_cmd.step);
 }
 
-fn build_pagey(b: *std.Build, target: std.zig.CrossTarget, optimize: std.builtin.Mode) void {
+fn build_pagey(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.Mode) void {
     const raylib = raylib_build.addRaylib(b, target, optimize, .{});
     raylib.defineCMacro("GRAPHICS_API_OPENGL_43", "1");
 
