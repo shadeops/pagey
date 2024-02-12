@@ -203,7 +203,7 @@ pub fn main() !u8 {
         null,
         file_size,
         std.os.PROT.READ,
-        std.os.MAP.PRIVATE,
+        .{.TYPE= .PRIVATE},
         file.handle,
         0,
     );

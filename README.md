@@ -27,5 +27,4 @@ Once Pagey is running:
 
 # Requirements
 * Linux x86
-* Zig 0.12.0-dev.2059+42389cb9c (or later)
-
+* Zig 0.12.0-dev.2710+c3eb592a3 (or later)
