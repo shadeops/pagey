@@ -18,7 +18,10 @@ fn build_flush(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.bu
 }
 
 fn build_pagey(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.Mode) void {
-    const raylib = raylib_build.addRaylib(b, target, optimize, .{});
+    const raylib = raylib_build.addRaylib(b, target, optimize, .{
+        .raudio = false,
+        .rmodels = false,
+    });
     raylib.defineCMacro("GRAPHICS_API_OPENGL_43", "1");
 
     const exe = b.addExecutable(.{
