@@ -95,7 +95,7 @@ fn squareSize(n: i32, x: i32, y: i32) i32 {
 }
 
 fn flush() void {
-    std.os.sync();
+    std.posix.sync();
     const drop_caches = std.fs.openFileAbsoluteZ(
         "/proc/sys/vm/drop_caches",
         .{ .mode = .write_only },
@@ -199,15 +199,15 @@ pub fn main() !u8 {
 
     ///////////////////////////////////////////////////////////////////////////
     // Setup Memory Mapping
-    const mapped_file = try std.os.mmap(
+    const mapped_file = try std.posix.mmap(
         null,
         file_size,
-        std.os.PROT.READ,
+        std.posix.PROT.READ,
         .{.TYPE= .PRIVATE},
         file.handle,
         0,
     );
-    defer std.os.munmap(mapped_file);
+    defer std.posix.munmap(mapped_file);
 
     // Setup mincore page vector
     const vec = try allocator.alloc(u8, pages);
@@ -293,7 +293,7 @@ pub fn main() !u8 {
         }
 
         // Fetch Loaded Pages And Update Page Texture
-        try std.os.mincore(mapped_file.ptr, file_size, vec.ptr);
+        try std.posix.mincore(mapped_file.ptr, file_size, vec.ptr);
         ray.rlUpdateShaderBuffer(ssbo, vec.ptr, @intCast(vec.len), 0);
 
         ray.BeginDrawing();
@@ -378,13 +378,13 @@ pub fn main() !u8 {
             }
 
             if (ray.IsKeyPressed(ray.KEY_F1)) {
-                try std.os.madvise(mapped_file.ptr, mapped_file.len, std.os.MADV.NORMAL);
+                try std.posix.madvise(mapped_file.ptr, mapped_file.len, std.posix.MADV.NORMAL);
                 msg = .{ .msg = .normal };
             } else if (ray.IsKeyPressed(ray.KEY_F2)) {
-                try std.os.madvise(mapped_file.ptr, mapped_file.len, std.os.MADV.SEQUENTIAL);
+                try std.posix.madvise(mapped_file.ptr, mapped_file.len, std.posix.MADV.SEQUENTIAL);
                 msg = .{ .msg = .sequential };
             } else if (ray.IsKeyPressed(ray.KEY_F3)) {
-                try std.os.madvise(mapped_file.ptr, mapped_file.len, std.os.MADV.RANDOM);
+                try std.posix.madvise(mapped_file.ptr, mapped_file.len, std.posix.MADV.RANDOM);
                 msg = .{ .msg = .random };
             } else if (ray.IsKeyPressed(ray.KEY_DELETE)) {
                 flush();
